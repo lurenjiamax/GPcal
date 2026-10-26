@@ -8,6 +8,8 @@
 import pyxel
 from pathlib import Path
 import sys
+import os
+from Klib.Hardware import parameters_directory
 
 # Default value used when calibration is reset
 # DEFAULT_AXIS_MAX : this one is not critical as it only
@@ -23,7 +25,7 @@ DEFAULT_AXIS_MAX=0x580
 # the calibration procedure.
 DEFAULT_TRIGGER_MAX=0x755
 
-PARAMETERS_DIR_PATH="/sys/module/retroid/parameters"
+PARAMETERS_DIR_PATH=parameters_directory()
 
 class Axis:
     def __init__(self,calibration,pname="leftx",name="Left X", orientation="h"):
@@ -307,7 +309,7 @@ class RPCalibration:
         self.load_parameters()
 
     def create_fake(self):
-        self.parameters_dir = Path("/tmp") / "rpcal.fake"
+        self.parameters_dir = Path(os.environ.get('XDG_STATE_HOME',Path.home()/'.local/share'))/'gpcal'/'simulation'
         self.parameters_dir.mkdir(parents=True,exist_ok=True)
 
         for axis in [ "axis_leftx", "axis_lefty", "axis_rightx", "axis_righty" ]:

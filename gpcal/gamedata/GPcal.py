@@ -9,6 +9,7 @@ import pyxel
 import datetime
 from pathlib import Path
 from Klib.PyxUI import *
+from Klib.CalibrationStore import save, snapshot
 
 CALIBRATE_DETECTION_PERCENT=10  
 AXIS_MAX_PERCENT=95             # correction after calc (error margin)
@@ -138,11 +139,12 @@ class GPCalibrate:
         self.draw_control_hint(14,225)
         
     def save_calibration(self):
-        savepath = Path.home() / ".config" / "autostart"
-        savepath.mkdir(parents=True,exist_ok=True)
-        savepath = savepath / "GPcal.sh"
-        self.ui_gamepad.calibration.save_configuration(savepath)
-        savepath.chmod(0o777)
+        try:
+            savepath = save(snapshot())
+        except (OSError,ValueError) as error:
+            self.ui_textbox_info.settext(f"Save failed: {error}")
+            print(f'GPcal save failed: {error}',flush=True)
+            return
         self.ui_textbox_info.settext(f"Calibration data saved to")
         self.ui_textbox_info.settext(f"{savepath}")
         self.ui_textbox_info.settext("Where to sail now captain ?")

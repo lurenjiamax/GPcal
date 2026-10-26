@@ -1,0 +1,14 @@
+[Unit]
+Description=Restore saved physical gamepad calibration
+After=systemd-modules-load.service
+Before=inputplumber.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/thorch-gpcal-calibration restore
+RemainAfterExit=yes
+StateDirectory=gpcal
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

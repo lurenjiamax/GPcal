@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gamepad Tester</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #f2f2f2;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 16px;
+    }
+    .pad {
+      border: 1px solid #444;
+      border-radius: 8px;
+      margin: 12px 0;
+      padding: 16px;
+      background: #1b1b1b;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 72px 1fr 64px;
+      gap: 8px;
+      align-items: center;
+      margin: 6px 0;
+    }
+    meter {
+      width: 100%;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .button {
+      min-width: 44px;
+      padding: 8px;
+      border-radius: 6px;
+      text-align: center;
+      background: #303030;
+      border: 1px solid #555;
+    }
+    .pressed {
+      background: #2b7cff;
+      border-color: #7aadff;
+    }
+    .muted {
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gamepad Tester</h1>
+  <p class="muted">Press a button or move a stick if no controller appears.</p>
+  <main id="pads"></main>
+  <script>
+    const root = document.getElementById('pads');
+
+    function format(value) {
+      return Number(value).toFixed(3);
+    }
+
+    function renderPad(pad) {
+      const axes = pad.axes.map((axis, index) => `
+        <div class="row">
+          <span>Axis ${index}</span>
+          <meter min="-1" max="1" low="-0.5" high="0.5" optimum="0" value="${axis}"></meter>
+          <span>${format(axis)}</span>
+        </div>
+      `).join('');
+      const buttons = pad.buttons.map((button, index) => `
+        <div class="button ${button.pressed ? 'pressed' : ''}">
+          ${index}<br>${format(button.value)}
+        </div>
+      `).join('');
+      return `
+        <section class="pad">
+          <h2>${pad.id}</h2>
+          <p class="muted">Index ${pad.index} | ${pad.mapping || 'unknown mapping'}</p>
+          <div class="grid">
+            <div>${axes}</div>
+            <div class="buttons">${buttons}</div>
+          </div>
+        </section>
+      `;
+    }
+
+    function tick() {
+      const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+      root.innerHTML = pads.length
+        ? pads.map(renderPad).join('')
+        : '<p>No gamepads detected.</p>';
+      requestAnimationFrame(tick);
+    }
+
+    tick();
+  </script>
+</body>
+</html>

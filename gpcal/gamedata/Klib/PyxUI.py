@@ -11,6 +11,7 @@ from pathlib import Path
 import math
 
 from Klib.RPocket import RPCalibration, Axis
+from Klib.Hardware import open_gamepad
 
 INPUT_SEARCH_PATH="/sys/class/input"
 INPUT_DEV_DIR="/dev/input"
@@ -379,14 +380,13 @@ class UIGamepad(UIPanel):
 
         self.add_uiobject(self.textbox_sdl_view)
 
-        self.event_path = None
-        self.find_event_path()
-
-        self.event_format = 'llHHi'
-        self.event_size = struct.calcsize(self.event_format)
-
-        if self.event_path != None:
-            self.eventpipe = os.open(self.event_path, os.O_RDONLY | os.O_NONBLOCK)
+        self.input_device,triggers=open_gamepad()
+        self.event_path=Path(self.input_device.path)
+        self.input_axes={0:self.stickleft.axis_x,1:self.stickleft.axis_y,
+                         3:self.stickright.axis_x,4:self.stickright.axis_y,
+                         triggers[0]:self.gauge_triggerleft.axis,triggers[1]:self.gauge_triggerright.axis}
+        for code,axis in self.input_axes.items():
+            axis.update_value(self.input_device.absinfo(code).value)
     
     def find_event_path(self, gp_name=GAMEPAD_NAME):
         try:
@@ -414,32 +414,13 @@ class UIGamepad(UIPanel):
         self.calibration.load_parameters()
 
     def read_events(self):
-        while True:
-            try:
-                event = os.read(self.eventpipe, self.event_size)
-
-                (tv_sec, tv_usec, type, code, value) = struct.unpack(self.event_format, event)
-
-                if type == 3 and  code == 0:  
-                    self.stickleft.axis_x.update_value(value)
-
-                elif type == 3 and  code == 1:
-                    self.stickleft.axis_y.update_value(value)
-
-                elif type == 3 and code == 3:
-                    self.stickright.axis_x.update_value(value)
-
-                elif type == 3 and code == 4:
-                    self.stickright.axis_y.update_value(value)
-
-                elif type == 3 and  code == 20:
-                    self.gauge_triggerleft.axis.update_value(value)
-
-                elif type == 3 and code == 21:
-                    self.gauge_triggerright.axis.update_value(value)
-
-            except OSError as e:
-                break
+        try:
+            for event in self.input_device.read():
+                axis=self.input_axes.get(event.code) if event.type==3 else None
+                if axis is not None and axis.value!=event.value:
+                    axis.update_value(event.value)
+        except BlockingIOError:
+            pass
 
     def read_sdlgamepad(self):
 

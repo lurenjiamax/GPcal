@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+tester="/usr/share/thorch/gamepad-tester/index.html"
+if [[ ! -f "${tester}" ]]; then
+  echo "Gamepad tester page is missing: ${tester}" >&2
+  exit 1
+fi
+
+exec xdg-open "${tester}"

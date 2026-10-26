@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=GPcal
+Comment=Calibrate physical Thor and Retroid gamepad sticks and triggers
+Exec=thorch-start-gpcal
+Icon=input-gaming
+Terminal=false
+Categories=Settings;

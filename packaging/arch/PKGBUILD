@@ -1,0 +1,40 @@
+# Maintainer: lurenjiamax
+pkgname=thorch-gamepadcalibration
+pkgver=2024.10.02
+pkgrel=4
+pkgdesc='GPcal with physical Thor trigger calibration and persistent driver settings'
+arch=(aarch64)
+url='https://github.com/lurenjiamax/GPcal'
+license=(MIT)
+depends=(bash python python-evdev sdl2 xdg-utils)
+makedepends=(tar)
+provides=(gamepadcalibration)
+options=(!strip)
+
+# Build the maintained checkout. The upstream bundle supplies only dependencies,
+# never the maintained application files embedded in that archive.
+_root="$(git -C "$startdir" rev-parse --show-toplevel)"
+
+package() {
+  install -d "$pkgdir/usr/share/gpcal" "$pkgdir/usr/bin"
+  tar --no-same-owner -xzf "$_root/rocknix/gpcal-python-3.13.tgz" \
+    -C "$pkgdir/usr/share" gpcal/pyxel
+  cp -a "$_root/gpcal/gamedata/." "$pkgdir/usr/share/gpcal/"
+  install -Dm755 "$startdir/thorch-start-gpcal" "$pkgdir/usr/bin/thorch-start-gpcal"
+  install -Dm755 "$startdir/thorch-gpcal-calibration" "$pkgdir/usr/bin/thorch-gpcal-calibration"
+  ln -s thorch-start-gpcal "$pkgdir/usr/bin/gpcal"
+  install -Dm644 "$startdir/thorch-gpcal.desktop" "$pkgdir/usr/share/applications/thorch-gpcal.desktop"
+  install -Dm644 "$startdir/thorch-gpcal-restore.service" "$pkgdir/usr/lib/systemd/system/thorch-gpcal-restore.service"
+  install -Dm644 "$startdir/gpcal-restore.conf" "$pkgdir/usr/lib/systemd/system/inputplumber.service.d/gpcal-restore.conf"
+  install -Dm644 "$_root/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$_root/docs/thor.md" "$pkgdir/usr/share/doc/$pkgname/thor.md"
+  {
+    printf 'source=%s\n' "$(git -C "$_root" rev-parse HEAD)"
+    printf 'changes=%s\n' "$(git -C "$_root" status --porcelain --untracked-files=no)"
+    sha256sum "$_root/rocknix/gpcal-python-3.13.tgz"
+  } > "$pkgdir/usr/share/doc/$pkgname/build-source.txt"
+  # Preserve the existing separate controller tester alongside GPcal.
+  install -Dm644 "$_root/packaging/arch/gamepad-tester.html" "$pkgdir/usr/share/thorch/gamepad-tester/index.html"
+  install -Dm755 "$_root/packaging/arch/thorch-start-gamepad-tester" "$pkgdir/usr/bin/thorch-start-gamepad-tester"
+  install -Dm644 "$_root/packaging/arch/thorch-gamepad-tester.desktop" "$pkgdir/usr/share/applications/thorch-gamepad-tester.desktop"
+}

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (( EUID == 0 )); then
+  exec python3 /usr/share/gpcal/session.py "$@"
+fi
+
+if command -v pkexec >/dev/null 2>&1; then
+  exec pkexec /usr/bin/env \
+    DISPLAY="${DISPLAY:-}" WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" \
+    XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" XAUTHORITY="${XAUTHORITY:-}" \
+    HOME="$HOME" SDL_GAMECONTROLLERCONFIG="${SDL_GAMECONTROLLERCONFIG:-}" \
+    SDL_GAMECONTROLLERCONFIG_FILE="${SDL_GAMECONTROLLERCONFIG_FILE:-}" \
+    /usr/bin/thorch-start-gpcal "$@"
+fi
+exec sudo -E /usr/bin/thorch-start-gpcal "$@"
