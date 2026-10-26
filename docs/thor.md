@@ -43,7 +43,7 @@ Build as an ordinary user from the checkout:
 
 ```sh
 cd packaging/arch
-makepkg --nodeps --force --ignorearch
+makepkg --config "$PWD/makepkg.conf" --nodeps --force
 ```
 
 The package is for aarch64. The existing Thorch browser-based gamepad tester
