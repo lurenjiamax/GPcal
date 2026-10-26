@@ -16,6 +16,12 @@ def parameters_directory():
 
 def open_gamepad():
     names={'AYN Odin2 Gamepad','Retroid Pocket Gamepad'}
+    from Klib.InputPlumber import open_calibration
+    session = open_calibration(names)
+    if session is not None:
+        device, triggers = session
+        print(f'GPcal calibration session: {device.name} ({device.path})', flush=True)
+        return device, triggers
     required={ecodes.ABS_X,ecodes.ABS_Y,ecodes.ABS_RX,ecodes.ABS_RY}
     for path in list_devices():
         device=InputDevice(path)

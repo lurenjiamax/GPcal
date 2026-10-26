@@ -1,12 +1,12 @@
 # Maintainer: lurenjiamax
 pkgname=thorch-gamepadcalibration
 pkgver=2024.10.02
-pkgrel=4
+pkgrel=5
 pkgdesc='GPcal with physical Thor trigger calibration and persistent driver settings'
 arch=(aarch64)
 url='https://github.com/lurenjiamax/GPcal'
 license=(MIT)
-depends=(bash python python-evdev sdl2 xdg-utils)
+depends=(bash python python-dbus python-evdev sdl2 xdg-utils)
 makedepends=(tar)
 provides=(gamepadcalibration)
 options=(!strip)

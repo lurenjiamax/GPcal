@@ -7,14 +7,19 @@ application files embedded inside it are never installed or rewritten.
 
 ## Calibration
 
-Launch GPcal from the applications menu. Close games first: the launcher
-temporarily stops InputPlumber so calibration can read the physical gamepad.
-InputPlumber is restored when GPcal exits, including ordinary errors and handled
-termination signals. A forced kill or power loss cannot run process cleanup.
+Launch GPcal from the applications menu. Close games first. With a compatible
+InputPlumber version, GPcal opens a source-local raw calibration session over
+D-Bus; InputPlumber stays running and keeps the physical gamepad grabbed.
+Only the selected gamepad's normal input routing pauses. Session disconnection
+automatically restores routing and refreshes axis ranges, including after a GPcal
+crash. The launcher never stops or starts InputPlumber. An older running version
+without the calibration API is rejected, rather than silently stopping it.
+When InputPlumber is absent, physical evdev input can still be opened directly.
 
 The input reader identifies Thor and Retroid physical gamepads, detects supported
 trigger axes from evdev capabilities and never silently calibrates a virtual SDL
-controller. Both `ABS_Z` / `ABS_RZ` and older `ABS_HAT2X` / `ABS_HAT2Y` are supported.
+controller. Raw here means before InputPlumber translation; kernel driver
+calibration still applies. Both `ABS_Z` / `ABS_RZ` and older `ABS_HAT2X` / `ABS_HAT2Y` are supported.
 The Thor `rsinput` and Retroid `retroid` parameter directories are discovered at
 runtime. Device event numbers and the bundled Python runtime version are not fixed.
 
