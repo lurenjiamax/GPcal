@@ -80,6 +80,7 @@ class GPCalibrate:
         ui_panel.add_uiobject(self.ui_textbox_data)
 
         self.ui.append(ui_panel)
+        ui_panel.set_controls(self.ui_gamepad.controls)
 
         pyxel.run(self.update, self.draw)
 
@@ -89,11 +90,12 @@ class GPCalibrate:
         self.exit_frame = pyxel.frame_count
 
     def update(self):
+        self.ui_gamepad.poll_input()
 
         if pyxel.frame_count - self.exit_frame > 30 and self.exit_frame > 0:
             exit()
 
-        if pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B):
+        if self.ui_gamepad.button_pressed(pyxel.GAMEPAD1_BUTTON_B):
             
             if self.calibrate_stick:
                 self.ui_textbox_info.settext("Calibration canceled")

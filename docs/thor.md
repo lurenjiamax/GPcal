@@ -16,6 +16,11 @@ crash. The launcher never stops or starts InputPlumber. An older running version
 without the calibration API is rejected, rather than silently stopping it.
 When InputPlumber is absent, physical evdev input can still be opened directly.
 
+UI navigation uses the same raw stream: evdev d-pad keys or hat axes select
+controls, South (A in the Xbox layout) confirms, and East (B) cancels/goes back.
+Keyboard navigation remains available. Raw input is collected before UI handling
+each frame, so navigation does not depend on paused virtual-controller output.
+
 The input reader identifies Thor and Retroid physical gamepads, detects supported
 trigger axes from evdev capabilities and never silently calibrates a virtual SDL
 controller. Raw here means before InputPlumber translation; kernel driver

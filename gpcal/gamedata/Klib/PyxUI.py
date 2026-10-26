@@ -9,6 +9,7 @@ import struct
 import os
 from pathlib import Path
 import math
+from evdev import ecodes
 
 from Klib.RPocket import RPCalibration, Axis
 from Klib.Hardware import open_gamepad
@@ -16,6 +17,42 @@ from Klib.Hardware import open_gamepad
 INPUT_SEARCH_PATH="/sys/class/input"
 INPUT_DEV_DIR="/dev/input"
 GAMEPAD_NAME="Retroid Pocket Gamepad"
+
+class RawControls:
+    """Frame-local UI navigation from the same raw stream as calibration axes."""
+    def __init__(self):
+        self.mapping = {
+            ecodes.BTN_SOUTH: pyxel.GAMEPAD1_BUTTON_A,
+            ecodes.BTN_EAST: pyxel.GAMEPAD1_BUTTON_B,
+            ecodes.BTN_DPAD_LEFT: pyxel.GAMEPAD1_BUTTON_DPAD_LEFT,
+            ecodes.BTN_DPAD_RIGHT: pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT,
+            ecodes.BTN_DPAD_UP: pyxel.GAMEPAD1_BUTTON_DPAD_UP,
+            ecodes.BTN_DPAD_DOWN: pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+        }
+        self.held = set()
+        self.pressed = set()
+
+    def begin_frame(self):
+        self.pressed.clear()
+
+    def _set(self, code, down):
+        if down:
+            if code not in self.held:
+                self.pressed.add(code)
+            self.held.add(code)
+        else:
+            self.held.discard(code)
+
+    def feed(self, event):
+        if event.type == ecodes.EV_KEY and event.code in self.mapping:
+            self._set(self.mapping[event.code], event.value != 0)
+        elif event.type == ecodes.EV_ABS:
+            if event.code == ecodes.ABS_HAT0X:
+                self._set(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, event.value < 0)
+                self._set(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT, event.value > 0)
+            elif event.code == ecodes.ABS_HAT0Y:
+                self._set(pyxel.GAMEPAD1_BUTTON_DPAD_UP, event.value < 0)
+                self._set(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN, event.value > 0)
 
 class UIObject:
     def __init__(self,x=0,y=0,w=320,h=240):
@@ -25,6 +62,17 @@ class UIObject:
         self.h = h
         self.umplus12 = pyxel.Font("assets/umplus_j12r.bdf")
         self.visible = True
+        self.controls = None
+
+    def set_controls(self, controls):
+        self.controls = controls
+        for child in getattr(self, 'ui_objects', []):
+            child.set_controls(controls)
+
+    def button_pressed(self, button):
+        if self.controls is not None and button in self.controls.mapping.values():
+            return button in self.controls.pressed
+        return pyxel.btnp(button)
 
     def draw_text_with_border(self, x, y, s, col, bcol, font=None):
         for dx in range(-1, 2):
@@ -107,15 +155,15 @@ class UIPanel(UIObject):
     def update_selection(self):
         if (self._selected > -1 and self._selection_enabled):
             shift = 0
-            if pyxel.btnp(pyxel.KEY_RIGHT) \
-                or pyxel.btnp(pyxel.KEY_DOWN) \
-                or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) \
-                or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
+            if self.button_pressed(pyxel.KEY_RIGHT) \
+                or self.button_pressed(pyxel.KEY_DOWN) \
+                or self.button_pressed(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) \
+                or self.button_pressed(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
                 shift = 1
-            elif pyxel.btnp(pyxel.KEY_LEFT) \
-                or pyxel.btnp(pyxel.KEY_UP) \
-                or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT) \
-                or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP):
+            elif self.button_pressed(pyxel.KEY_LEFT) \
+                or self.button_pressed(pyxel.KEY_UP) \
+                or self.button_pressed(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT) \
+                or self.button_pressed(pyxel.GAMEPAD1_BUTTON_DPAD_UP):
                 shift = -1
 
             if shift:
@@ -181,8 +229,8 @@ class UIButton(UISelectable):
 
     def _update_pressed(self):
         if self._selected \
-              and ( pyxel.btnp(pyxel.KEY_RETURN) \
-                    or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)):
+              and ( self.button_pressed(pyxel.KEY_RETURN) \
+                    or self.button_pressed(pyxel.GAMEPAD1_BUTTON_A)):
             self._toggle_pressed()
             pyxel.play(0,1)
             self._run_callback()
@@ -381,6 +429,8 @@ class UIGamepad(UIPanel):
         self.add_uiobject(self.textbox_sdl_view)
 
         self.input_device,triggers=open_gamepad()
+        self.set_controls(RawControls())
+        self.input_frame = None
         self.event_path=Path(self.input_device.path)
         self.input_axes={0:self.stickleft.axis_x,1:self.stickleft.axis_y,
                          3:self.stickright.axis_x,4:self.stickright.axis_y,
@@ -416,6 +466,7 @@ class UIGamepad(UIPanel):
     def read_events(self):
         try:
             for event in self.input_device.read():
+                self.controls.feed(event)
                 axis=self.input_axes.get(event.code) if event.type==3 else None
                 if axis is not None and axis.value!=event.value:
                     axis.update_value(event.value)
@@ -452,13 +503,18 @@ class UIGamepad(UIPanel):
             self.gauge_triggerright.axis.update_value(value)
 
 
-    def update(self):
-
+    def poll_input(self):
+        if self.input_frame == pyxel.frame_count:
+            return
+        self.input_frame = pyxel.frame_count
+        self.controls.begin_frame()
         if self.event_path == None:
             self.read_sdlgamepad()
         else:
-            self.read_events()        
+            self.read_events()
 
+    def update(self):
+        self.poll_input()
         super().update()
 
     def toggle_sdl_view(self):

@@ -1,7 +1,7 @@
 # Maintainer: lurenjiamax
 pkgname=thorch-gamepadcalibration
 pkgver=2024.10.02
-pkgrel=5
+pkgrel=6
 pkgdesc='GPcal with physical Thor trigger calibration and persistent driver settings'
 arch=(aarch64)
 url='https://github.com/lurenjiamax/GPcal'
